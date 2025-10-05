@@ -14,12 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Debug Repository Structure
+      - name: Debug Path Structure
         run: |
-          echo "📂 Current Working Directory:"
+          echo "📍 Current Working Directory:"
           pwd
-          echo "📁 Listing repository contents:"
-          find . -maxdepth 3 -type f | sort || true
+          echo "📂 Repository Contents (first 50 lines):"
+          find . -maxdepth 4 -type f | sort | head -50 || true
 
       - name: Install Dependencies
         run: |
@@ -40,7 +40,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           echo "🚀 Running dataset registration script..."
-          python tourism_project/model_building/data_register.py
+          python $(find . -type f -path "*/tourism_project/model_building/data_register.py")
 
   data-prep:
     name: 🧹 Data Preparation
@@ -66,7 +66,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           echo "🧩 Starting data preparation..."
-          python tourism_project/model_building/prep.py
+          python $(find . -type f -path "*/tourism_project/model_building/prep.py")
 
   model-training:
     name: 🧠 Model Training and MLflow Logging
@@ -98,7 +98,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           echo "🏋️‍♂️ Training model and logging metrics..."
-          python tourism_project/model_building/train.py
+          python $(find . -type f -path "*/tourism_project/model_building/train.py")
 
   deploy-hosting:
     name: 🌐 Deploy to Hugging Face Spaces
@@ -124,4 +124,4 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           echo "🚢 Deploying frontend app to Hugging Face Space..."
-          python tourism_project/hosting/hosting.py
+          python $(find . -type f -path "*/tourism_project/hosting/hosting.py")
