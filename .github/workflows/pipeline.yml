@@ -3,28 +3,32 @@ name: Tourism Project Pipeline
 on:
   push:
     branches:
-      - main  # Automatically triggers on push to the main branch
+      - main  # Trigger workflow on push to main branch
 
 jobs:
 
   register-dataset:
+    name: 📦 Register Dataset on Hugging Face
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
 
-      - name: Show repo tree (debug)
+      - name: Debug Repository Structure
         run: |
-          echo "📂 Repository structure:"
+          echo "📂 Current Working Directory:"
+          pwd
+          echo "📁 Listing repository contents:"
           find . -maxdepth 3 -type f | sort || true
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f tourism_project/requirements.txt ]; then
-            echo "📦 Installing from tourism_project/requirements.txt"
+            echo "📦 Installing dependencies from tourism_project/requirements.txt"
             pip install -r tourism_project/requirements.txt
           elif [ -f requirements.txt ]; then
-            echo "📦 Installing from root requirements.txt"
+            echo "📦 Installing dependencies from root requirements.txt"
             pip install -r requirements.txt
           else
             echo "⚠️ No requirements.txt found — installing minimal dependencies"
@@ -34,11 +38,15 @@ jobs:
       - name: Upload Dataset to Hugging Face Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python tourism_project/model_building/data_register.py
+        run: |
+          echo "🚀 Running dataset registration script..."
+          python tourism_project/model_building/data_register.py
 
   data-prep:
+    name: 🧹 Data Preparation
     needs: register-dataset
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
 
@@ -53,14 +61,18 @@ jobs:
             pip install pandas scikit-learn xgboost mlflow joblib huggingface_hub datasets requests
           fi
 
-      - name: Run Data Preparation
+      - name: Run Data Preparation Script
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python tourism_project/model_building/prep.py
+        run: |
+          echo "🧩 Starting data preparation..."
+          python tourism_project/model_building/prep.py
 
   model-training:
+    name: 🧠 Model Training and MLflow Logging
     needs: data-prep
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
 
@@ -75,19 +87,24 @@ jobs:
             pip install pandas scikit-learn xgboost mlflow joblib huggingface_hub datasets requests
           fi
 
-      - name: Start MLflow Server (Background)
+      - name: Start MLflow Tracking Server (Background)
         run: |
-          nohup mlflow ui --host 0.0.0.0 --port 5000 & 
-          sleep 5  # Allow MLflow UI to initialize
+          echo "🚀 Starting MLflow tracking server..."
+          nohup mlflow ui --host 0.0.0.0 --port 5000 &
+          sleep 5
 
-      - name: Model Building and Training
+      - name: Run Model Training
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python tourism_project/model_building/train.py
+        run: |
+          echo "🏋️‍♂️ Training model and logging metrics..."
+          python tourism_project/model_building/train.py
 
   deploy-hosting:
-    runs-on: ubuntu-latest
+    name: 🌐 Deploy to Hugging Face Spaces
     needs: [model-training, data-prep, register-dataset]
+    runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
 
@@ -105,4 +122,6 @@ jobs:
       - name: Push Deployment Files to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python tourism_project/hosting/hosting.py
+        run: |
+          echo "🚢 Deploying frontend app to Hugging Face Space..."
+          python tourism_project/hosting/hosting.py
